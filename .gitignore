@@ -1,0 +1,62 @@
+
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, build with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Dependency directories
+vendor/
+
+# macOS
+.DS_Store
+
+# IDEs
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# IDE generated files
+*.tmproj
+*.tm_meta
+*.tm_build
+
+# Delve debugger
+.dbg
+.debug
+
+# Go modules
+/pkg/
+/vendor/
+
+# Build output
+/bin/
+/out/
+
+# Envoy proxy
+envoy*
+
+# Terraform
+.terraform/
+
+# Kubernetes
+.minikube/
+
+# Terragrunt
+.terragrunt-cache/
+
+# Google Cloud SDK
+.config/gcloud/
+
+# AWS CLI
+.aws/
+
+# Local HTTP server
+.s.http/
