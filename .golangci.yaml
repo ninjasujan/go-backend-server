@@ -1,0 +1,34 @@
+version: "2"
+linters:
+  enable:
+    - gocritic
+    - gocyclo
+    - gosec
+    - lll
+    - misspell
+    - revive
+  exclusions:
+    generated: lax
+    rules:
+      - linters:
+          - errcheck
+          - gocyclo
+          - gosec
+        path: _test\.go
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

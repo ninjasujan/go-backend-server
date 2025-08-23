@@ -10,6 +10,9 @@ import (
 	"time"
 
 	"app/server/config"
+	"app/server/db"
+
+	"app/server/route"
 
 	"github.com/gin-gonic/gin"
 )
@@ -17,13 +20,23 @@ import (
 func main() {
 
 	// Load config
-	config := config.LoadConfig()
+	appCfg := config.LoadConfig("local.yaml")
 
 	// gin.SetMode(gin.ReleaseMode)
 	appEngine := gin.New()
 
+	// Connect Postgres
+	db.InitPostgres(&appCfg.Postgres)
+
+	// Run Migration script
+	db.RunMigration(&appCfg.Postgres)
+
+	// Register Routes
+
+	route.RegisterRoutes(appEngine)
+
 	server := &http.Server{
-		Addr:              fmt.Sprintf("%s:%d", config.Server.Host, config.Server.Port),
+		Addr:              fmt.Sprintf("%s:%d", appCfg.Server.Host, appCfg.Server.Port),
 		Handler:           appEngine,
 		ReadHeaderTimeout: time.Minute,
 		ReadTimeout:       time.Minute,
