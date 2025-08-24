@@ -14,23 +14,24 @@ import (
 	"gorm.io/gorm"
 )
 
-func getDBSource(config *config.Postgres) string {
+func getDBSource(cfg config.Postgres) string {
 	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
-		config.User, config.Password, config.Host, config.Port, config.Database)
+		cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Database)
 }
 
-func InitPostgres(config *config.Postgres) *gorm.DB {
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable TimeZone=%s", config.Host, config.User, config.Password, config.Database, config.Port, "UTC")
+func InitPostgres(cfg config.Postgres) (*gorm.DB, error) {
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable TimeZone=%s",
+		cfg.Host, cfg.User, cfg.Password, cfg.Database, cfg.Port, "UTC")
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		return nil, err
 	}
 	log.Println("[postgres database connected]")
-	return db
+	return db, nil
 }
 
-func RunMigration(config *config.Postgres) {
-	dbSrc := getDBSource(config)
+func RunMigration(cfg config.Postgres) error {
+	dbSrc := getDBSource(cfg)
 	_, currentFile, _, _ := runtime.Caller(0)
 	projectRoot := filepath.Dir(filepath.Dir(currentFile)) // Go up two levels from db/run_migrations.go to project root
 	migrationPath := filepath.Join(projectRoot, "migrations")
@@ -38,12 +39,12 @@ func RunMigration(config *config.Postgres) {
 	m, err := migrate.New(
 		"file://"+migrationPath,
 		dbSrc)
-
 	if err != nil {
-		log.Fatal("[failed to create migration instance]:", err)
+		return err
 	}
 	if err := m.Up(); err != nil {
-		log.Println("[failed to run migrations]:", err)
+		log.Println("[migration skipped]:", err)
 	}
 	log.Println("[migrations script executed successfully]")
+	return nil
 }

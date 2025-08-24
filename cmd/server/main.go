@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -20,20 +22,33 @@ import (
 func main() {
 
 	// Load config
-	appCfg := config.LoadConfig("local.yaml")
+	appCfg, err := config.LoadConfig("local.yaml")
+	if err != nil {
+		log.Fatal("Failed to load config:", err)
+	}
 
 	// gin.SetMode(gin.ReleaseMode)
 	appEngine := gin.New()
 
 	// Connect Postgres
-	db.InitPostgres(&appCfg.Postgres)
+	pgDb, err := db.InitPostgres(appCfg.Postgres)
+
+	if err != nil {
+		log.Println("[postgres database connection failed]")
+		os.Exit(1)
+	}
+	defer db.Cleanup(pgDb)
 
 	// Run Migration script
-	db.RunMigration(&appCfg.Postgres)
+	err = db.RunMigration(appCfg.Postgres)
+	if err != nil {
+		log.Println("Migration script failed", err)
+		os.Exit(1)
+	}
 
 	// Register Routes
 
-	route.RegisterRoutes(appEngine)
+	route.RegisterRoutes(pgDb, appEngine)
 
 	server := &http.Server{
 		Addr:              fmt.Sprintf("%s:%d", appCfg.Server.Host, appCfg.Server.Port),
@@ -46,8 +61,9 @@ func main() {
 	}
 
 	go func() {
-		if err := server.ListenAndServe(); err != nil {
-			log.Println("[server failed to start]")
+		log.Printf("[server starting on %s]", server.Addr)
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Printf("[server failed to start: %v]", err)
 		}
 	}()
 
@@ -58,11 +74,22 @@ func main() {
 
 	<-sigChan
 
-	fmt.Println("[shutting down server]")
+	log.Println("[shutdown signal received]")
+	log.Println("[shutting down server gracefully...]")
 
-	if err := server.Close(); err != nil {
-		log.Println("[server failed to close]")
+	// Create shutdown context with 30 second timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(ctx); err != nil {
+		log.Printf("[graceful shutdown failed: %v]", err)
+		log.Println("[forcing server close]")
+
+		// Force close if graceful shutdown fails
+		if closeErr := server.Close(); closeErr != nil {
+			log.Printf("[force close failed: %v]", closeErr)
+		}
 	} else {
-		log.Println("[server closed successfully]")
+		log.Println("[server shutdown completed gracefully]")
 	}
 }

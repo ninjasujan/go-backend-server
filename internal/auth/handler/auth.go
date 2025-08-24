@@ -1,18 +1,22 @@
 package handler
 
 import (
+	"app/server/internal/auth/service"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
-type AuthController struct {
+type AuthHandler struct {
+	authService *service.AuthService
 }
 
-func NewAuthController() *AuthController {
-	return &AuthController{}
+func NewAuthHandler(service *service.AuthService) *AuthHandler {
+	return &AuthHandler{
+		authService: service,
+	}
 }
 
-func (ac *AuthController) Register(ctx *gin.Context) {
+func (ac *AuthHandler) Register(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, "register route called")
 }

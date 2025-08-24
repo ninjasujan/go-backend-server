@@ -1,19 +1,13 @@
 package config
 
 import (
-	"log"
+	"fmt"
 	"os"
-	"sync"
 
 	"gopkg.in/yaml.v3"
 )
 
-var (
-	configStore *Config
-	once        sync.Once
-)
-
-type server struct {
+type Server struct {
 	Host string `yaml:"host"`
 	Port int    `yaml:"port"`
 }
@@ -27,29 +21,20 @@ type Postgres struct {
 }
 
 type Config struct {
-	Server   server   `yaml:"server"`
+	Server   Server   `yaml:"server"`
 	Postgres Postgres `yaml:"postgres"`
 }
 
-func LoadConfig(path string) *Config {
+func LoadConfig(path string) (Config, error) {
 	file, err := os.ReadFile(path)
 	if err != nil {
-		log.Fatal("[unable to load config file]:", err)
+		return Config{}, fmt.Errorf("unable to load config file: %w", err)
 	}
 
 	var config Config
 	if err := yaml.Unmarshal(file, &config); err != nil {
-		log.Fatal("[unable to unmarshal config file]:", err)
+		return Config{}, fmt.Errorf("unable to unmarshal config file: %w", err)
 	}
-	configStore = &config
-	return configStore
-}
 
-func GetConfig() *Config {
-	once.Do(func() {
-		if configStore == nil {
-			LoadConfig("local.yaml")
-		}
-	})
-	return configStore
+	return config, nil
 }
