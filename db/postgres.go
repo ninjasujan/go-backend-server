@@ -2,10 +2,12 @@ package db
 
 import (
 	"app/server/config"
+	"errors"
 	"fmt"
 	"log"
 	"path/filepath"
 	"runtime"
+	"time"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -26,7 +28,19 @@ func InitPostgres(cfg config.Postgres) (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Println("[postgres database connected]")
+
+	// Configure connection pool
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get database instance: %w", err)
+	}
+
+	// Set connection pool parameters
+	sqlDB.SetMaxIdleConns(10)           // Maximum idle connections
+	sqlDB.SetMaxOpenConns(100)          // Maximum open connections
+	sqlDB.SetConnMaxLifetime(time.Hour) // Maximum connection lifetime
+
+	log.Println("[postgres database connected with connection pool configured]")
 	return db, nil
 }
 
@@ -43,8 +57,13 @@ func RunMigration(cfg config.Postgres) error {
 		return err
 	}
 	if err := m.Up(); err != nil {
-		log.Println("[migration skipped]:", err)
+		if errors.Is(err, migrate.ErrNoChange) {
+			log.Println("[migrations are up to date]")
+		} else {
+			return fmt.Errorf("migration failed: %w", err)
+		}
+	} else {
+		log.Println("[migrations executed successfully]")
 	}
-	log.Println("[migrations script executed successfully]")
 	return nil
 }

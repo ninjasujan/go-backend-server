@@ -35,9 +35,9 @@ func main() {
 
 	if err != nil {
 		log.Println("[postgres database connection failed]")
+		db.Cleanup(pgDb)
 		os.Exit(1)
 	}
-	defer db.Cleanup(pgDb)
 
 	// Run Migration script
 	err = db.RunMigration(appCfg.Postgres)
