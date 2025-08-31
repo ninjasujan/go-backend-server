@@ -1,7 +1,7 @@
 package db
 
 import (
-	"app/server/config"
+	"app/server/common/config"
 	"errors"
 	"fmt"
 	"log"

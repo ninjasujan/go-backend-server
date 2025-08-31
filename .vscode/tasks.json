@@ -1,0 +1,14 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "go",
+      "label": "go: build package",
+      "command": "build",
+      "args": ["${fileDirname}"],
+      "problemMatcher": ["$go"],
+      "group": "build",
+      "detail": "cd /home/sujan/Documents/dev-workspace/go-backend-server; go build ${fileDirname}"
+    }
+  ]
+}

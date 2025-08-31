@@ -4,52 +4,58 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"app/server/config"
+	"app/server/common/config"
+	"app/server/common/logger"
 	"app/server/db"
-
 	"app/server/route"
 
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
+	// Initialize logger first
+	if err := logger.InitLogger(logger.Config{
+		Level:  "debug",
+		Format: "console",
+	}); err != nil {
+		fmt.Printf("Failed to initialize logger: %v\n", err)
+		os.Exit(1)
+	}
 
 	// Load config
 	appCfg, err := config.LoadConfig("local.yaml")
 	if err != nil {
-		log.Fatal("Failed to load config:", err)
+		logger.Error().Err(err).Msg("Failed to load config")
+		os.Exit(1)
 	}
-
-	// gin.SetMode(gin.ReleaseMode)
-	appEngine := gin.New()
 
 	// Connect Postgres
 	pgDb, err := db.InitPostgres(appCfg.Postgres)
-
 	if err != nil {
-		log.Println("[postgres database connection failed]")
+		logger.Error().Err(err).Msg("Postgres database connection failed")
 		db.Cleanup(pgDb)
 		os.Exit(1)
 	}
 
 	// Run Migration script
-	err = db.RunMigration(appCfg.Postgres)
-	if err != nil {
-		log.Println("Migration script failed", err)
+	if err := db.RunMigration(appCfg.Postgres); err != nil {
+		logger.Error().Err(err).Msg("Migration script failed")
 		os.Exit(1)
 	}
 
-	// Register Routes
+	// Setup Gin
+	appEngine := gin.New()
 
+	// Register Routes
 	route.RegisterRoutes(pgDb, appEngine)
 
+	// Configure server
 	server := &http.Server{
 		Addr:              fmt.Sprintf("%s:%d", appCfg.Server.Host, appCfg.Server.Port),
 		Handler:           appEngine,
@@ -60,36 +66,36 @@ func main() {
 		MaxHeaderBytes:    1 << 20, // 1 MB
 	}
 
+	// Start server in goroutine
 	go func() {
-		log.Printf("[server starting on %s]", server.Addr)
+		logger.ServerStartup(server.Addr)
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Printf("[server failed to start: %v]", err)
+			logger.Error().Err(err).Msg("Server failed to start")
 		}
 	}()
 
-	log.Println("[server started successfully]")
+	logger.Info().Msg("Server started successfully")
 
+	// Wait for shutdown signal
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-
 	<-sigChan
 
-	log.Println("[shutdown signal received]")
-	log.Println("[shutting down server gracefully...]")
+	logger.Info().Msg("Shutdown signal received")
+	logger.ServerShutdown()
 
-	// Create shutdown context with 30 second timeout
+	// Graceful shutdown with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		log.Printf("[graceful shutdown failed: %v]", err)
-		log.Println("[forcing server close]")
+		logger.Error().Err(err).Msg("Graceful shutdown failed")
+		logger.Info().Msg("Forcing server close")
 
-		// Force close if graceful shutdown fails
 		if closeErr := server.Close(); closeErr != nil {
-			log.Printf("[force close failed: %v]", closeErr)
+			logger.Error().Err(closeErr).Msg("Force close failed")
 		}
 	} else {
-		log.Println("[server shutdown completed gracefully]")
+		logger.Info().Msg("Server shutdown completed gracefully")
 	}
 }
