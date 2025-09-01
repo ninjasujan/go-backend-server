@@ -1,6 +1,9 @@
 
 version: "3.0"
-env: "DEV"
+
+app_config:
+  env: "DEV"
+  mode: "debug"
 
 server:
   host: "0.0.0.0"

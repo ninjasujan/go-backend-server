@@ -13,6 +13,7 @@ import (
 	"app/server/common/config"
 	"app/server/common/logger"
 	"app/server/db"
+	"app/server/middleware"
 	"app/server/route"
 
 	"github.com/gin-gonic/gin"
@@ -29,14 +30,14 @@ func main() {
 	}
 
 	// Load config
-	appCfg, err := config.LoadConfig("local.yaml")
+	appConfig, err := config.LoadConfig("local.yaml")
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to load config")
 		os.Exit(1)
 	}
 
 	// Connect Postgres
-	pgDb, err := db.InitPostgres(appCfg.Postgres)
+	pgDb, err := db.InitPostgres(appConfig.Postgres)
 	if err != nil {
 		logger.Error().Err(err).Msg("Postgres database connection failed")
 		db.Cleanup(pgDb)
@@ -44,20 +45,24 @@ func main() {
 	}
 
 	// Run Migration script
-	if err := db.RunMigration(appCfg.Postgres); err != nil {
+	if err := db.RunMigration(appConfig.Postgres); err != nil {
 		logger.Error().Err(err).Msg("Migration script failed")
 		os.Exit(1)
 	}
 
 	// Setup Gin
+	gin.SetMode(appConfig.App.Mode)
 	appEngine := gin.New()
+
+	// Initialize common middleware
+	appEngine.Use(middleware.RequestLogger())
 
 	// Register Routes
 	route.RegisterRoutes(pgDb, appEngine)
 
 	// Configure server
 	server := &http.Server{
-		Addr:              fmt.Sprintf("%s:%d", appCfg.Server.Host, appCfg.Server.Port),
+		Addr:              fmt.Sprintf("%s:%d", appConfig.Server.Host, appConfig.Server.Port),
 		Handler:           appEngine,
 		ReadHeaderTimeout: time.Minute,
 		ReadTimeout:       time.Minute,

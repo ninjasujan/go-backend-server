@@ -99,4 +99,5 @@ func ServerStartup(addr string) {
 
 func ServerShutdown() {
 	Info().Msg("Server shutting down gracefully")
+
 }

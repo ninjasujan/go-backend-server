@@ -7,6 +7,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type App struct {
+	Env  string `yaml:"env"`
+	Mode string `yaml:"mode"`
+}
+
 type Server struct {
 	Host string `yaml:"host"`
 	Port int    `yaml:"port"`
@@ -23,6 +28,7 @@ type Postgres struct {
 type Config struct {
 	Server   Server   `yaml:"server"`
 	Postgres Postgres `yaml:"postgres"`
+	App      App      `yaml:"app_config"`
 }
 
 func LoadConfig(path string) (Config, error) {
