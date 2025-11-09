@@ -67,6 +67,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	go kafkaProducer.HandleDeliveryReports()
+
 	// Register Routes
 	route.RegisterRoutes(pgDb, appEngine, kafkaProducer)
 
