@@ -25,10 +25,15 @@ type Postgres struct {
 	Database string `yaml:"database"`
 }
 
+type Kafka struct {
+	Brokers string `yaml:"brokers"`
+}
+
 type Config struct {
 	Server   Server   `yaml:"server"`
 	Postgres Postgres `yaml:"postgres"`
 	App      App      `yaml:"app_config"`
+	Kafka    Kafka    `yaml:"kafka"`
 }
 
 func LoadConfig(path string) (Config, error) {

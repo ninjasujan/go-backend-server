@@ -18,5 +18,9 @@ func NewAuthHandler(service *service.AuthService) *AuthHandler {
 }
 
 func (ac *AuthHandler) Register(ctx *gin.Context) {
+	if err := ac.authService.Register(); err != nil {
+		ctx.JSON(http.StatusInternalServerError, err.Error())
+		return
+	}
 	ctx.JSON(http.StatusOK, "register route called")
 }

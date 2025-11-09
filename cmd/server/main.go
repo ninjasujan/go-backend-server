@@ -11,10 +11,13 @@ import (
 	"time"
 
 	"app/server/common/config"
+	"app/server/common/constant"
 	"app/server/common/logger"
+	"app/server/common/middleware"
 	"app/server/db"
-	"app/server/middleware"
 	"app/server/route"
+
+	"app/server/common/kafka/producer"
 
 	"github.com/gin-gonic/gin"
 )
@@ -57,8 +60,15 @@ func main() {
 	// Initialize common middleware
 	appEngine.Use(middleware.RequestLogger())
 
+	// Kafka Producer Initialization
+	kafkaProducer, err := producer.NewKafkaProducer(appConfig.Kafka.Brokers, constant.KafkaClientID)
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to initialize Kafka producer")
+		os.Exit(1)
+	}
+
 	// Register Routes
-	route.RegisterRoutes(pgDb, appEngine)
+	route.RegisterRoutes(pgDb, appEngine, kafkaProducer)
 
 	// Configure server
 	server := &http.Server{
