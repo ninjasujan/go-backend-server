@@ -1,26 +1,34 @@
 package handler
 
 import (
-	"app/server/internal/auth/service"
+	"app/server/internal/auth/data"
+	authService "app/server/internal/auth/service"
+	"context"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
 type AuthHandler struct {
-	authService *service.AuthService
+	authService authService.AuthServiceInterface
 }
 
-func NewAuthHandler(service *service.AuthService) *AuthHandler {
+func NewAuthHandler(service authService.AuthServiceInterface) *AuthHandler {
 	return &AuthHandler{
 		authService: service,
 	}
 }
 
 func (ac *AuthHandler) Register(ctx *gin.Context) {
-	if err := ac.authService.Register(); err != nil {
-		ctx.JSON(http.StatusInternalServerError, err.Error())
+	var req data.RegisterRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, "register route called")
+
+	if err := ac.authService.Register(context.Background(), &req); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": "register route called"})
 }
