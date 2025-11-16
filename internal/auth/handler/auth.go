@@ -3,7 +3,6 @@ package handler
 import (
 	"app/server/internal/auth/data"
 	authService "app/server/internal/auth/service"
-	"context"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -20,15 +19,17 @@ func NewAuthHandler(service authService.AuthServiceInterface) *AuthHandler {
 }
 
 func (ac *AuthHandler) Register(ctx *gin.Context) {
-	var req data.RegisterRequest
+	var req data.RegisterUserRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if err := ac.authService.Register(context.Background(), &req); err != nil {
+	response, err := ac.authService.Register(ctx.Request.Context(), &req)
+	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	} else {
+		ctx.JSON(http.StatusOK, response)
 	}
-	ctx.JSON(http.StatusOK, gin.H{"message": "register route called"})
 }
